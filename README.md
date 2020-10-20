@@ -1,5 +1,5 @@
 # AssemblyStat
-Fast assembly statistics overview
+Fast assembly statistics overview, raw version
 
 Run 
 ```
