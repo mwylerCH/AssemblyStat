@@ -1,0 +1,84 @@
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+use English;
+use List::Util qw(sum);
+use File::Basename;
+
+### Read in Genome
+## read input sequence inside an HASH (geneID "\t" fasta)
+my $FASTA = $ARGV[0];
+
+# unzip if needed
+if ($FASTA =~ /.gz$/) {
+    open(IN, "gunzip -c $FASTA |") or die "can't open $FASTA";
+}
+else {
+    open(IN, $FASTA) or die "can't open $FASTA";
+}
+
+## read input sequence inside an hash
+
+my %seqs = ();
+my $header = '';
+
+while (my $line = <IN>){
+    chomp $line;
+    $line =~ s/^\s*$//;
+    if ($line =~ m/^>(.*)$/){
+        # remove sequence description from header
+        $header = (split ' ', $1)[0];
+    } else {
+        $seqs{"$header"} .= $line;
+    }
+}
+close (IN);
+
+
+# count number of scaffolds
+my $NR_scaffolds = keys %seqs;
+
+# make hash with length of each scaffold
+my @lenHash;
+my $HASHkey;
+my $HASHvalue;
+while (  ($HASHkey, $HASHvalue) = each %seqs ) {
+         my $scaffLen = length $seqs{"$HASHkey"};
+         push(@lenHash, $scaffLen);
+         
+}
+
+# sort reverse
+@lenHash = sort { $b <=> $a } @lenHash;
+
+# genome length
+my $GenomeLen =  sum(0, @lenHash);
+# print "total Len: $GenomeLen\n";
+
+# N50
+my $halfGenomeLen = $GenomeLen/2;
+my $scaffoldSum = 0;
+my $counter = 0;
+
+while ($scaffoldSum < $halfGenomeLen){
+    $scaffoldSum += $lenHash[$counter];
+    $counter++;
+}
+my $N50 = $counter-1;
+
+# N90
+my $GenomeLen90 = $GenomeLen*0.9;
+my $scaffoldSum90 = 0;
+my $counter90 = 0;
+
+while ($scaffoldSum90 < $GenomeLen90){
+    $scaffoldSum90 += $lenHash[$counter90];
+    $counter90++;
+}
+my $N90 = $counter90-1;
+
+### Output
+my $AssemblyName = basename($FASTA);
+print "Name\t#scaffolds\tshortest\tlongest\tN50\tN90\tgenomeLen\n";
+print "$AssemblyName\t$NR_scaffolds\t$lenHash[-1]\t$lenHash[0]\t$lenHash[$N50]\t$lenHash[$N90]\t$GenomeLen\n";
